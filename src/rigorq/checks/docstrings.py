@@ -73,6 +73,7 @@ class DocstringInfo:
         node_name : str
             Name of the node (or '<module>' for modules)
     """
+
     node: ast.AST
     token: tokenize.TokenInfo
     raw_lines: List[Tuple[int, str]]
@@ -91,19 +92,19 @@ class BaseValidator(ABC):
     Subclasses must implement either validate_line() for line-by-line
     checks or validate_docstring() for whole-docstring checks, or both.
     """
-    
+
     @property
     @abstractmethod
     def code(self) -> str:
         """Violation code (e.g., 'RQ200')."""
         pass
-    
+
     @property
     @abstractmethod
     def description(self) -> str:
         """Human-readable description of the rule."""
         pass
-    
+
     def validate_line(
         self,
         line_num: int,
@@ -124,7 +125,7 @@ class BaseValidator(ABC):
             Violation if rule is violated, None otherwise
         """
         return None
-    
+
     def validate_docstring(
         self,
         docstring_info: DocstringInfo,
@@ -145,18 +146,18 @@ class BaseValidator(ABC):
 
 class MaxLineLengthValidator(BaseValidator):
     """Enforces maximum line length for docstrings (PEP 8)."""
-    
+
     def __init__(self, max_length: int = 72):
         self.max_length = max_length
-    
+
     @property
     def code(self) -> str:
         return "RQ200"
-    
+
     @property
     def description(self) -> str:
         return f"Docstring line too long (max {self.max_length} chars)"
-    
+
     def validate_line(
         self,
         line_num: int,
@@ -168,11 +169,11 @@ class MaxLineLengthValidator(BaseValidator):
         # Skip delimiter-only lines
         if raw_line in ('"""', "'''", '""""""', "''''''"):
             return None
-        
+
         # Count visual line length (including indentation)
         # line_length = len(raw_line.rstrip('\n\r'))
         line_length = len(raw_line)
-        
+
         if line_length > self.max_length:
             return Violation(
                 path=path,
@@ -183,7 +184,7 @@ class MaxLineLengthValidator(BaseValidator):
                         f"{self.max_length})",
                 tool="rigorq"
             )
-        
+
         return None
 
 class FirstLineSummaryValidator(BaseValidator):
@@ -196,18 +197,18 @@ class FirstLineSummaryValidator(BaseValidator):
       - Should end with a period (optional enforcement)
       - Should fit on one line or multiple lines
     """
-    
+
     def __init__(self, require_period: bool = True):
         self.require_period = require_period
-    
+
     @property
     def code(self) -> str:
         return "RQ202"
-    
+
     @property
     def description(self) -> str:
         return "Docstring must start with one-line summary"
-    
+
     def validate_docstring(
         self,
         docstring_info: DocstringInfo,
@@ -215,7 +216,7 @@ class FirstLineSummaryValidator(BaseValidator):
     ) -> List[Violation]:
         """Check that first line is a proper summary."""
         violations = []
-        
+
         # Get first content lines (skip opening delimiters)
         first_lines = []
         for _, raw_line in docstring_info.raw_lines:
@@ -251,7 +252,7 @@ class FirstLineSummaryValidator(BaseValidator):
                 tool="rigorq"
             ))
             return violations
-        
+
         # Check if the last line ends with a period (if required)
         if first_lines and self.require_period and not first_lines[-1].rstrip().endswith('.'):
             violations.append(Violation(
@@ -262,7 +263,7 @@ class FirstLineSummaryValidator(BaseValidator):
             message="Last line of summary should end with a period",
             tool="rigorq"
             ))
-        
+
         return violations
 
 
@@ -284,7 +285,6 @@ class ParameterReturnDefinitionValidator(BaseValidator):
         path: Path
     ) -> List[Violation]:
         """Validate NumPy-style parameter and return sections."""
-
         valid_nodes = {
             "function", "async_function", "method",
             "async_method", "class",
@@ -306,7 +306,7 @@ class ParameterReturnDefinitionValidator(BaseValidator):
             )
             if not has_init:
                 return violations
-            
+
             # Get __init__ node to check for parameters
             init_node = next(
             item for item in docstring_info.node.body
@@ -320,15 +320,15 @@ class ParameterReturnDefinitionValidator(BaseValidator):
             is_method = False
 
             if docstring_info.node_type in {"function", "async_function"} and docstring_info.node.args.args:
-                is_method = True if docstring_info.node.args.args[0].arg in {"self", "cls"} else False 
+                is_method = True if docstring_info.node.args.args[0].arg in {"self", "cls"} else False
 
             # Methods have 'self' as first param, so check for > 1
             min_params = 2 if is_method else 1
             has_params = len(docstring_info.node.args.args) >= min_params
-            
+
             if not has_params:
                 return violations
-        
+
 
         lines = [raw for _, raw in docstring_info.raw_lines]
         i = 0
@@ -458,7 +458,7 @@ def _is_docstring_candidate(
     value = expr.value
     is_string = (
         isinstance(value, str) or
-        (hasattr(ast, 'Constant') and isinstance(value, ast.Constant) 
+        (hasattr(ast, 'Constant') and isinstance(value, ast.Constant)
          and isinstance(value.value, str))
     )
     if not is_string:
@@ -549,13 +549,13 @@ def _extract_docstring_info(
     raw_lines = _extract_docstring_lines(token, source_lines)
     content = _get_docstring_content(token)
     node_type, node_name = _get_node_info(node)
-    
+
     # Calculate base indentation
     indent_level = 0
     if raw_lines:
         first_line = raw_lines[0][1]
         indent_level = len(first_line)
-    
+
     return DocstringInfo(
         node=node,
         token=token,
@@ -601,12 +601,12 @@ def validate_docstrings(
             FirstLineSummaryValidator(),
             ParameterReturnDefinitionValidator(),
         ]
-    
+
     try:
         source_text = path.read_text(encoding="utf-8")
     except UnicodeDecodeError as e:
         raise ValueError(f"Cannot read {path} as UTF-8: {e}")
-    
+
     source_lines = source_text.splitlines(keepends=False)
 
     # Parse AST
@@ -633,15 +633,15 @@ def validate_docstrings(
 
     violations: List[Violation] = []
     validated_tokens = set()
-    
+
     # Helper to process a docstring with all validators
     def process_docstring(node: ast.AST, token: tokenize.TokenInfo):
         token_id = (token.start, token.end)
         if token_id in validated_tokens:
             return
-        
+
         docstring_info = _extract_docstring_info(node, token, source_lines)
-        
+
         # Skip private items if requested
         if skip_private:
             name = docstring_info.node_name
@@ -649,9 +649,9 @@ def validate_docstrings(
             if name.startswith('_') and not (name.startswith('__') and name.endswith('__')):
                 validated_tokens.add(token_id)
                 return
-        
+
         validated_tokens.add(token_id)
-        
+
         # Run all validators
         for validator in validators:
             # Line-by-line validation
@@ -661,43 +661,43 @@ def validate_docstrings(
                 )
                 if violation:
                     violations.append(violation)
-            
+
             # Whole-docstring validation
             whole_violations = validator.validate_docstring(
                 docstring_info, path
             )
             violations.extend(whole_violations)
-    
+
     # Check module-level docstring
     module_candidates = [
         token for token in string_tokens
         if token.start[0] <= 3
     ]
-    
+
     for token in module_candidates:
         if _is_docstring_candidate(
             tree, token, tree.body[1] if len(tree.body) > 1 else None
         ):
             process_docstring(tree, token)
-    
+
     # Check class/function docstrings
     for node in ast.walk(tree):
         if not isinstance(node, (
             ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef
         )):
             continue
-        
+
         node_end_line = getattr(node, 'end_lineno', node.lineno)
         candidates = [
             token for token in string_tokens
             if node.lineno <= token.start[0] <= node_end_line + 2
         ]
-        
+
         for token in candidates:
             body = node.body
             next_stmt = body[1] if len(body) > 1 else None
-            
+
             if _is_docstring_candidate(node, token, next_stmt):
                 process_docstring(node, token)
-    
+
     return violations
