@@ -3,7 +3,7 @@ name: Publish Python Package
 on:
   push:
     tags:
-      - "v*"   # publish only on version tags like v0.1.0
+      - "v*"  # publish only on version tags like v0.1.0
 
 jobs:
   build:
@@ -27,5 +27,6 @@ jobs:
       - name: Build package
         run: hatch build
 
+      # Use official PyPI action for OIDC-based trusted publishing
       - name: Publish to PyPI
-        run: hatch publish --no-prompt
+        uses: pypa/gh-action-pypi-publish@release/v1
