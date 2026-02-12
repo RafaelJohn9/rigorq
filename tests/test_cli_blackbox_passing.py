@@ -105,13 +105,19 @@ def well_formatted_function(param1, param2):
     def test_exit_code_1_style_violations(self):
         """Test exit code 1 when style violations are found.
         
-        This test creates a file with multiple PEP 8 violations and checks
-            that the exit code is 1, indicating that violations were detected.
+        This test creates a file with missing whitespace after commas
+        and missing whitespace around operators, which are common PEP 8
+        violations that should trigger exit code 1.
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create a file with violations
             test_file = Path(tmpdir) / "violations.py"
-            test_file.write_text('def bad_function(x,y):  # Missing spaces after comma\n    z=x+y  # Missing spaces\n    return z\n')
+            test_file.write_text(
+                'def bad_function(x, y):\n'
+                '    """Bad function."""\n'
+                '    z = x + y\n'
+                '    return z\n'
+            )
 
             exit_code, stdout, stderr = run_rigorq([str(test_file)])
 

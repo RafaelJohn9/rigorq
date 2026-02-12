@@ -76,7 +76,7 @@ def _build_ruff_cmd(
     # Strict rule selection — no config file required
     cmd.extend([
         "--output-format=concise",
-        "--select=E,W,D,N,PLC3002",
+        "--extend-select=E225,E226,E227,E228,N,D",
         "--ignore=D203,D212",
         f"--line-length={line_length}",
         "--target-version=py38",  # Conservative baseline
